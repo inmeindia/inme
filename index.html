@@ -2,113 +2,152 @@
 <html lang="hi">
 <head>
     <meta charset="UTF-8">
-    <title>Inme Social - Feed</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Inme Social - Test App</title>
+    <script src="https://cdn.tailwindcss.com"></script>
     <style>
-        body { font-family: sans-serif; background: #fafafa; margin: 0; padding-bottom: 50px; }
-        .header { background: white; padding: 10px; text-align: center; border-bottom: 1px solid #dbdbdb; position: sticky; top: 0; z-index: 100; }
-        .container { max-width: 500px; margin: 20px auto; padding: 10px; }
-        
-        /* Upload Card */
-        .upload-card { background: white; border: 1px solid #dbdbdb; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-        input, textarea, button { width: 100%; margin-top: 10px; border-radius: 5px; border: 1px solid #ddd; padding: 8px; box-sizing: border-box; }
-        button { background: #0095f6; color: white; font-weight: bold; cursor: pointer; border: none; }
-
-        /* Feed Post Styling */
-        .post { background: white; border: 1px solid #dbdbdb; margin-bottom: 25px; border-radius: 8px; overflow: hidden; }
-        .post img, .post video { width: 100%; display: block; max-height: 500px; object-fit: cover; }
-        .post-content { padding: 15px; }
-        .caption { margin: 0; font-size: 14px; }
-        .time { font-size: 10px; color: gray; margin-top: 5px; }
+        .post-img { aspect-ratio: 1/1; object-fit: cover; }
+        .hidden { display: none; }
     </style>
 </head>
-<body>
+<body class="bg-gray-50">
 
-<div class="header"><h2>Inme</h2></div>
+    <nav class="bg-white border-b sticky top-0 z-50 p-3 flex justify-between items-center max-w-2xl mx-auto w-full">
+        <h1 class="text-xl font-bold italic">Inme</h1>
+        <div id="userNav" class="hidden flex gap-4 items-center">
+            <button onclick="showPage('createPage')" class="text-2xl">+</button>
+            <button onclick="showPage('feedPage')" class="text-sm">Home</button>
+            <button id="logoutBtn" class="text-xs text-red-500">Exit</button>
+        </div>
+    </nav>
 
-<div class="container">
-    <div class="upload-card">
-        <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
-        <textarea id="caption" placeholder="Aapke mann mein kya hai?"></textarea>
-        <button id="uploadBtn">Post Karein</button>
-        <p id="status" style="font-size: 12px; text-align: center;"></p>
+    <div id="authPage" class="max-w-sm mx-auto mt-20 p-6 bg-white border rounded shadow-sm">
+        <h2 class="text-center text-2xl mb-6">Inme Login</h2>
+        <input type="email" id="authEmail" placeholder="Email" class="w-full border p-2 mb-3 rounded">
+        <input type="password" id="authPass" placeholder="Password" class="w-full border p-2 mb-3 rounded">
+        <button onclick="handleAuth('login')" class="w-full bg-blue-500 text-white p-2 rounded font-bold mb-2">Login</button>
+        <button onclick="handleAuth('signup')" class="w-full text-blue-500 text-sm">Naya Account Banayein</button>
     </div>
 
-    <div id="postFeed"></div>
-</div>
+    <div id="feedPage" class="max-w-md mx-auto mt-4 hidden">
+        <div id="mainFeed" class="space-y-6"></div>
+    </div>
+
+    <div id="createPage" class="max-w-md mx-auto mt-10 p-4 hidden">
+        <div class="bg-white p-4 border rounded">
+            <h3 class="font-bold mb-4">Nayi Post Daalein</h3>
+            <input type="file" id="postMedia" accept="image/*,video/*" multiple class="text-sm mb-3">
+            <textarea id="postCaption" placeholder="Caption likhein..." class="w-full border p-2 h-20"></textarea>
+            <button id="finalPostBtn" class="w-full bg-blue-500 text-white p-2 mt-3 rounded">Post Karein</button>
+        </div>
+    </div>
 
 <script type="module">
-  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
-  import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
-  const firebaseConfig = {
-    apiKey: "AIzaSyD2uK-htnjXv_UmgQMexDTj5odcGdpqEFg",
-    authDomain: "inme-f7076.firebaseapp.com",
-    projectId: "inme-f7076",
-    storageBucket: "inme-f7076.firebasestorage.app",
-    messagingSenderId: "940199729594",
-    appId: "1:940199729594:web:fe17ed05a2ff3c5d542583"
-  };
+    const firebaseConfig = {
+        apiKey: "AIzaSyD2uK-htnjXv_UmgQMexDTj5odcGdpqEFg",
+        authDomain: "inme-f7076.firebaseapp.com",
+        projectId: "inme-f7076",
+        storageBucket: "inme-f7076.firebasestorage.app",
+        messagingSenderId: "940199729594",
+        appId: "1:940199729594:web:fe17ed05a2ff3c5d542583"
+    };
 
-  const app = initializeApp(firebaseConfig);
-  const db = getFirestore(app);
-  const storage = getStorage(app);
+    const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
+    const db = getFirestore(app);
+    const storage = getStorage(app);
 
-  // --- 1. UPLOAD LOGIC ---
-  const uploadBtn = document.getElementById('uploadBtn');
-  uploadBtn.onclick = async () => {
-    const files = document.getElementById('mediaInput').files;
-    const caption = document.getElementById('caption').value;
-    if(files.length === 0) return alert("File chuno!");
-    
-    // Yahan wahi 30MB/90s wala logic lagana hai jo pehle bataya tha
-    uploadBtn.disabled = true;
-    document.getElementById('status').innerText = "Uploading...";
+    // --- Auth Handling ---
+    window.handleAuth = async (type) => {
+        const email = document.getElementById('authEmail').value;
+        const pass = document.getElementById('authPass').value;
+        try {
+            if(type === 'signup') await createUserWithEmailAndPassword(auth, email, pass);
+            else await signInWithEmailAndPassword(auth, email, pass);
+        } catch (e) { alert(e.message); }
+    };
 
-    const urls = [];
-    for (let f of files) {
-        const sRef = ref(storage, 'posts/' + Date.now() + "_" + f.name);
-        await uploadBytes(sRef, f);
-        urls.push(await getDownloadURL(sRef));
-    }
+    document.getElementById('logoutBtn').onclick = () => signOut(auth);
 
-    await addDoc(collection(db, "posts"), {
-        mediaUrls: urls,
-        caption: caption,
-        createdAt: serverTimestamp(),
-        type: files[0].type.startsWith('video') ? 'video' : 'image'
-    });
-    location.reload(); 
-  };
-
-  // --- 2. FEED FETCH LOGIC (Displaying Posts) ---
-  const feedDiv = document.getElementById('postFeed');
-  const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
-  const querySnapshot = await getDocs(q);
-
-  querySnapshot.forEach((doc) => {
-    const data = doc.data();
-    const postEl = document.createElement('div');
-    postEl.className = 'post';
-
-    let mediaHTML = '';
-    data.mediaUrls.forEach(url => {
-        if(data.type === 'video') {
-            mediaHTML += `<video src="${url}" controls></video>`;
+    onAuthStateChanged(auth, (user) => {
+        if (user) {
+            document.getElementById('authPage').classList.add('hidden');
+            document.getElementById('userNav').classList.remove('hidden');
+            showPage('feedPage');
+            loadFeed();
         } else {
-            mediaHTML += `<img src="${url}">`;
+            document.getElementById('authPage').classList.remove('hidden');
+            document.getElementById('userNav').classList.add('hidden');
+            showPage('authPage');
         }
     });
 
-    postEl.innerHTML = `
-        ${mediaHTML}
-        <div class="post-content">
-            <p class="caption"><b>User</b> ${data.caption}</p>
-            <p class="time">${data.createdAt ? data.createdAt.toDate().toLocaleString() : 'Just now'}</p>
-        </div>
-    `;
-    feedDiv.appendChild(postEl);
-  });
+    // --- Page Switcher ---
+    window.showPage = (id) => {
+        ['authPage', 'feedPage', 'createPage'].forEach(p => document.getElementById(p).classList.add('hidden'));
+        document.getElementById(id).classList.remove('hidden');
+    };
+
+    // --- Post Logic (30MB & 90s Check) ---
+    document.getElementById('finalPostBtn').onclick = async () => {
+        const files = document.getElementById('postMedia').files;
+        const caption = document.getElementById('postCaption').value;
+        if(files.length > 2) return alert("Sirf 2 photos allowed hain!");
+
+        const urls = [];
+        for(let f of files) {
+            if(f.size > 30*1024*1024) return alert("30MB se zyada badi file hai!");
+            const sRef = ref(storage, `posts/${Date.now()}_${f.name}`);
+            await uploadBytes(sRef, f);
+            urls.push(await getDownloadURL(sRef));
+        }
+
+        await addDoc(collection(db, "posts"), {
+            userId: auth.currentUser.email,
+            media: urls,
+            caption: caption,
+            likes: [],
+            createdAt: serverTimestamp()
+        });
+        alert("Post Ho Gayi!");
+        showPage('feedPage');
+        loadFeed();
+    };
+
+    // --- Feed & Like Logic ---
+    async function loadFeed() {
+        const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
+        const snap = await getDocs(q);
+        const feed = document.getElementById('mainFeed');
+        feed.innerHTML = '';
+
+        snap.forEach(d => {
+            const post = d.data();
+            const postEl = document.createElement('div');
+            postEl.className = "bg-white border rounded mb-4";
+            postEl.innerHTML = `
+                <div class="p-3 font-bold text-sm">${post.userId}</div>
+                <img src="${post.media[0]}" class="w-full post-img">
+                <div class="p-3">
+                    <button onclick="likePost('${d.id}')" class="text-xl">❤️ ${post.likes.length}</button>
+                    <p class="text-sm mt-2"><b>${post.userId}</b> ${post.caption}</p>
+                </div>
+            `;
+            feed.appendChild(postEl);
+        });
+    }
+
+    window.likePost = async (postId) => {
+        const postRef = doc(db, "posts", postId);
+        await updateDoc(postRef, { likes: arrayUnion(auth.currentUser.uid) });
+        loadFeed();
+    };
+
 </script>
 </body>
 </html>
