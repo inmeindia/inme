@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Insta-Firebase App</title>
+    <style>
+        body { font-family: Arial, sans-serif; background: #fafafa; display: flex; justify-content: center; padding: 20px; }
+        .upload-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
+        input, textarea { width: 100%; margin-bottom: 15px; border: 1px solid #dbdbdb; padding: 10px; border-radius: 5px; box-sizing: border-box; }
+        button { width: 100%; background: #0095f6; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
+        button:disabled { background: #b2dffc; }
+        #status { font-size: 12px; color: red; margin-top: 10px; }
+    </style>
+</head>
+<body>
+
+<div class="upload-card">
+    <h2>Create Post</h2>
+    <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
+    <textarea id="caption" placeholder="Write a caption..." rows="3"></textarea>
+    <button id="uploadBtn">Post Now</button>
+    <p id="status"></p>
+</div>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
+  import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+
+  // TODO: Apni Firebase Config yahan paste karein
+  const firebaseConfig = {
+    apiKey: "YOUR_API_KEY",
+    authDomain: "YOUR_PROJECT.firebaseapp.com",
+    projectId: "YOUR_PROJECT_ID",
+    storageBucket: "YOUR_PROJECT.appspot.com",
+    messagingSenderId: "YOUR_SENDER_ID",
+    appId: "YOUR_APP_ID"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const storage = getStorage(app);
+  const db = getFirestore(app);
+
+  const mediaInput = document.getElementById('mediaInput');
+  const uploadBtn = document.getElementById('uploadBtn');
+  const status = document.getElementById('status');
+
+  uploadBtn.onclick = async () => {
+    const files = mediaInput.files;
+    const captionText = document.getElementById('caption').value;
+
+    if (files.length === 0) return alert("Please select a file");
+    if (files.length > 2) return alert("Error: Sirf 2 images hi allow hain!");
+
+    const file = files[0];
+    
+    // 1. Validation: File Size (30MB)
+    if (file.size > 30 * 1024 * 1024) {
+        status.innerText = "Note: File 30MB se zyada hai, upload nahi ho sakti!";
+        return;
+    }
+
+    // 2. Validation: Video Duration (90 Seconds)
+    if (file.type.startsWith('video/')) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.onloadedmetadata = function() {
+            window.URL.revokeObjectURL(video.src);
+            if (video.duration > 90) {
+                alert("Note: Video 90 seconds se zyada lambi hai!");
+                location.reload();
+            } else {
+                startUpload(files, captionText);
+            }
+        };
+        video.src = URL.createObjectURL(file);
+    } else {
+        startUpload(files, captionText);
+    }
+  };
+
+  async function startUpload(files, caption) {
+    uploadBtn.disabled = true;
+    status.innerText = "Uploading... please wait.";
+    const urls = [];
+
+    try {
+        for (let i = 0; i < files.length; i++) {
+            const storageRef = ref(storage, 'posts/' + Date.now() + "_" + files[i].name);
+            const snapshot = await uploadBytes(storageRef, files[i]);
+            const downloadURL = await getDownloadURL(snapshot.ref);
+            urls.push(downloadURL);
+        }
+
+        // Firestore mein entry save karna
+        await addDoc(collection(db, "posts"), {
+            mediaUrls: urls,
+            caption: caption,
+            createdAt: serverTimestamp(),
+            type: files[0].type.startsWith('video/') ? 'video' : 'image'
+        });
+
+        status.style.color = "green";
+        status.innerText = "Post Successfully Uploaded!";
+        setTimeout(() => location.reload(), 2000);
+
+    } catch (error) {
+        status.innerText = "Error: " + error.message;
+        uploadBtn.disabled = false;
+    }
+  }
+</script>
+</body>
+</html>
