@@ -1,41 +1,49 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="hi">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Insta-Firebase App</title>
+    <title>Inme Social App</title>
     <style>
-        body { font-family: Arial, sans-serif; background: #fafafa; display: flex; justify-content: center; padding: 20px; }
-        .upload-card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); width: 100%; max-width: 400px; }
-        input, textarea { width: 100%; margin-bottom: 15px; border: 1px solid #dbdbdb; padding: 10px; border-radius: 5px; box-sizing: border-box; }
-        button { width: 100%; background: #0095f6; color: white; border: none; padding: 10px; border-radius: 5px; cursor: pointer; font-weight: bold; }
-        button:disabled { background: #b2dffc; }
-        #status { font-size: 12px; color: red; margin-top: 10px; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f0f2f5; display: flex; flex-direction: column; align-items: center; padding: 20px; }
+        .upload-card { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 8px 24px rgba(0,0,0,0.1); width: 100%; max-width: 450px; }
+        h2 { text-align: center; color: #1c1e21; }
+        input[type="file"], textarea { width: 100%; margin-bottom: 15px; border: 1px solid #ddd; padding: 12px; border-radius: 8px; box-sizing: border-box; font-size: 14px; }
+        textarea { resize: none; }
+        button { width: 100%; background: #0095f6; color: white; border: none; padding: 12px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 16px; transition: 0.3s; }
+        button:hover { background: #0077c8; }
+        button:disabled { background: #cccccc; cursor: not-allowed; }
+        #status { font-size: 14px; margin-top: 15px; text-align: center; font-weight: 500; }
+        .note { font-size: 12px; color: #65676b; margin-top: -10px; margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
 <div class="upload-card">
-    <h2>Create Post</h2>
+    <h2>Inme Post</h2>
+    <p class="note">Limit: Max 2 Photos ya 1 Video (90s / 30MB)</p>
+    
     <input type="file" id="mediaInput" accept="image/*,video/*" multiple>
-    <textarea id="caption" placeholder="Write a caption..." rows="3"></textarea>
-    <button id="uploadBtn">Post Now</button>
+    <textarea id="caption" placeholder="Aapke mann mein kya hai?" rows="4"></textarea>
+    <button id="uploadBtn">Post Karein</button>
     <p id="status"></p>
 </div>
 
 <script type="module">
+  // Firebase Modules Import
   import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
   import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
   import { getFirestore, collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
 
-  // TODO: Apni Firebase Config yahan paste karein
+  // Aapka Specific Firebase Config
   const firebaseConfig = {
-    apiKey: "YOUR_API_KEY",
-    authDomain: "YOUR_PROJECT.firebaseapp.com",
-    projectId: "YOUR_PROJECT_ID",
-    storageBucket: "YOUR_PROJECT.appspot.com",
-    messagingSenderId: "YOUR_SENDER_ID",
-    appId: "YOUR_APP_ID"
+    apiKey: "AIzaSyD2uK-htnjXv_UmgQMexDTj5odcGdpqEFg",
+    authDomain: "inme-f7076.firebaseapp.com",
+    projectId: "inme-f7076",
+    storageBucket: "inme-f7076.firebasestorage.app",
+    messagingSenderId: "940199729594",
+    appId: "1:940199729594:web:fe17ed05a2ff3c5d542583",
+    measurementId: "G-NEM8ZCE709"
   };
 
   const app = initializeApp(firebaseConfig);
@@ -50,63 +58,69 @@
     const files = mediaInput.files;
     const captionText = document.getElementById('caption').value;
 
-    if (files.length === 0) return alert("Please select a file");
-    if (files.length > 2) return alert("Error: Sirf 2 images hi allow hain!");
+    if (files.length === 0) return alert("Pehle file select karein!");
+    if (files.length > 2) return alert("Aap ek saath sirf 2 photos upload kar sakte hain.");
 
     const file = files[0];
-    
-    // 1. Validation: File Size (30MB)
+    const isVideo = file.type.startsWith('video/');
+
+    // 1. Check: File Size (30MB)
     if (file.size > 30 * 1024 * 1024) {
-        status.innerText = "Note: File 30MB se zyada hai, upload nahi ho sakti!";
+        status.style.color = "red";
+        status.innerText = "Error: File 30MB se badi hai!";
         return;
     }
 
-    // 2. Validation: Video Duration (90 Seconds)
-    if (file.type.startsWith('video/')) {
+    // 2. Check: Video Duration (90 Seconds)
+    if (isVideo) {
         const video = document.createElement('video');
         video.preload = 'metadata';
         video.onloadedmetadata = function() {
             window.URL.revokeObjectURL(video.src);
             if (video.duration > 90) {
-                alert("Note: Video 90 seconds se zyada lambi hai!");
+                alert("Error: Video 90 seconds se zyada lambi hai!");
                 location.reload();
             } else {
-                startUpload(files, captionText);
+                processUpload(files, captionText, 'video');
             }
         };
         video.src = URL.createObjectURL(file);
     } else {
-        startUpload(files, captionText);
+        processUpload(files, captionText, 'image');
     }
   };
 
-  async function startUpload(files, caption) {
+  async function processUpload(files, caption, type) {
     uploadBtn.disabled = true;
+    status.style.color = "blue";
     status.innerText = "Uploading... please wait.";
     const urls = [];
 
     try {
         for (let i = 0; i < files.length; i++) {
-            const storageRef = ref(storage, 'posts/' + Date.now() + "_" + files[i].name);
+            const fileName = 'posts/' + Date.now() + "_" + files[i].name;
+            const storageRef = ref(storage, fileName);
             const snapshot = await uploadBytes(storageRef, files[i]);
             const downloadURL = await getDownloadURL(snapshot.ref);
             urls.push(downloadURL);
         }
 
-        // Firestore mein entry save karna
+        // Firestore Database mein save karein
         await addDoc(collection(db, "posts"), {
             mediaUrls: urls,
             caption: caption,
-            createdAt: serverTimestamp(),
-            type: files[0].type.startsWith('video/') ? 'video' : 'image'
+            type: type,
+            createdAt: serverTimestamp()
         });
 
         status.style.color = "green";
-        status.innerText = "Post Successfully Uploaded!";
+        status.innerText = "Post Successfully Ho Gayi!";
         setTimeout(() => location.reload(), 2000);
 
     } catch (error) {
-        status.innerText = "Error: " + error.message;
+        console.error(error);
+        status.style.color = "red";
+        status.innerText = "Error: Permissions check karein (Firestore Rules).";
         uploadBtn.disabled = false;
     }
   }
